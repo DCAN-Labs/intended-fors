@@ -47,6 +47,8 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
 
 
 def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
+    d = layout.__dict__
+    print("layout: ", d)
     pos = 'PA'
     neg = 'AP'
 
@@ -60,6 +62,10 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
     neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=neg, extension='.nii.gz')
     list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
     list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+    print("pos_func_maps: ", pos_func_fmaps)
+    print("neg_func_maps: ", neg_func_fmaps)
+    print("list_pos: ", list_pos)
+    print("list_neg: ", list_neg)
 
     try:
         len(list_pos) == len(list_neg)
