@@ -1,6 +1,6 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
 
-import os, argparse, subprocess, json
+import os, sys, argparse, subprocess, json
 from itertools import product
 
 
@@ -159,3 +159,9 @@ def generate_parser(parser=None):
     )
     
     return parser
+
+def main():
+    print("main")
+
+if __name__ == "__main__":
+    sys.exit(main())
