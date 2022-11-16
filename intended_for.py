@@ -172,7 +172,9 @@ def main(argv=sys.argv):
         if fmap:
             print("Running SEFM select")
             base_temp_dir = fmap[0].dirname
-        sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir)
+            sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir)
+        else:
+            print("No fmap")
 
 
 if __name__ == "__main__":
