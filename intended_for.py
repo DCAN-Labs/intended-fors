@@ -167,8 +167,9 @@ def main(argv=sys.argv):
     
     for subject,sessions in subsess:
         last_pos, last_neg = sefm_select(layout, subject, sessions, fsl_dir)
-        json_field = 'intendedFor'
-        func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+        json_field = 'IntendedFor'
+        raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+        func_list = [os.path.join(x.dirname, x.filename) for x in raw_func_list]
 
         last_pos_json = f"{last_pos.split('.nii.gz')[0]}.json"
         last_neg_json = f"{last_neg.split('.nii.gz')[0]}.json"
