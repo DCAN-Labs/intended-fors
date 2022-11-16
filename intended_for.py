@@ -46,7 +46,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, eta_square=False):
+def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
     pos = 'PA'
     neg = 'AP'
 
@@ -54,13 +54,6 @@ def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, eta_square=Fa
     if fsl_dir[-1] != "/":
         fsl_dir += "/"
 
-    # Make a temporary working directory
-    temp_dir = os.path.join(base_temp_dir, subject + '_eta_temp')
-    try:
-        os.mkdir(temp_dir)
-    except:
-        print(temp_dir + " already exists")
-        pass
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
     pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=pos, extension='.nii.gz')
@@ -89,7 +82,13 @@ def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, eta_square=Fa
     # neg_ref = pairs[0][1]
     
     # if eta_square:
-    #     pass
+    #     #Make a temporary working directory
+    #     temp_dir = os.path.join(base_temp_dir, subject + '_eta_temp')
+    #     try:
+    #         os.mkdir(temp_dir)
+    #     except:
+    #         print(temp_dir + " already exists")
+    #         pass
     # else:
     #     best_pos = pairs[-1][0]
     #     best_neg = pairs[-1][1]
@@ -167,14 +166,14 @@ def main(argv=sys.argv):
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
     
     for subject,sessions in subsess:
-        fmap = layout.get(subject=subject, session=sessions, datatype='fmap', extension='.nii.gz', acquisition='func')        
-        # Check if there are func fieldmaps and return a list of each SEFM pos/neg pair
-        if fmap:
-            print("Running SEFM select")
-            base_temp_dir = fmap[0].dirname
-            sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir)
-        else:
-            print("No fmap")
+        sefm_select(layout, subject, sessions, fsl_dir)
+        # fmap = layout.get(subject=subject, session=sessions, datatype='fmap', extension='.nii.gz', acquisition='func')        
+        # # Check if there are func fieldmaps and return a list of each SEFM pos/neg pair
+        # if fmap:
+        #     print("Running SEFM select")
+        #     base_temp_dir = fmap[0].dirname
+        # else:
+        #     print("No fmap")
 
 
 if __name__ == "__main__":
