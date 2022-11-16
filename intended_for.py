@@ -58,16 +58,10 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
 
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
-    # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=pos, extension='.nii.gz')
     pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-    # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=neg, extension='.nii.gz')
     neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
     list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
     list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
-    print("pos_func_maps: ", pos_func_fmaps)
-    print("neg_func_maps: ", neg_func_fmaps)
-    print("list_pos: ", list_pos)
-    print("list_neg: ", list_neg)
 
     try:
         len(list_pos) == len(list_neg)
@@ -77,8 +71,6 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
     pairs = []
     for pair in zip(list_pos, list_neg):
         pairs.append(pair)
-
-    print(pairs)
 
     # tasks = {}
     # for pair in pairs:
@@ -98,11 +90,11 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
     #         print(temp_dir + " already exists")
     #         pass
     # else:
-    #     best_pos = pairs[-1][0]
-    #     best_neg = pairs[-1][1]
+    last_pos = pairs[-1][0]
+    last_neg = pairs[-1][1]
 
-    # return dictionary with keys being the run name and values being a pair
-
+    # to-do: return dictionary with keys being the run name and values being a pair
+    return last_pos, last_neg
 
 def insert_edit_json(json_path, json_field, value):
     with open(json_path, 'r') as f:
@@ -174,14 +166,17 @@ def main(argv=sys.argv):
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
     
     for subject,sessions in subsess:
-        sefm_select(layout, subject, sessions, fsl_dir)
-        # fmap = layout.get(subject=subject, session=sessions, datatype='fmap', extension='.nii.gz', acquisition='func')        
-        # # Check if there are func fieldmaps and return a list of each SEFM pos/neg pair
-        # if fmap:
-        #     print("Running SEFM select")
-        #     base_temp_dir = fmap[0].dirname
-        # else:
-        #     print("No fmap")
+        last_pos, last_neg = sefm_select(layout, subject, sessions, fsl_dir)
+        json_field = 'intendedFor'
+        func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+
+        last_pos_json = f"{last_pos.split('.nii.gz')[0]}.json"
+        last_neg_json = f"{last_neg.split('.nii.gz')[0]}.json"
+        print("func_list: ", func_list)
+        print("last_pos_json: ", last_pos_json)
+        print("last_neg_json: ", last_neg_json)
+        # insert_edit_json(last_pos_json, json_field, func_list)
+        # insert_edit_json(last_neg_json, json_field, func_list)
 
 
 if __name__ == "__main__":
