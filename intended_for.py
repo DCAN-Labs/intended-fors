@@ -58,8 +58,10 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
 
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
-    pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=pos, extension='.nii.gz')
-    neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=neg, extension='.nii.gz')
+    # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=pos, extension='.nii.gz')
+    pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
+    # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', acquisition='func', direction=neg, extension='.nii.gz')
+    neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
     list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
     list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
     print("pos_func_maps: ", pos_func_fmaps)
