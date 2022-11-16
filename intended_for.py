@@ -131,10 +131,6 @@ def generate_parser(parser=None):
         help="Required: Path to FSL directory."
     )
     parser.add_argument(
-        'mre_dir',
-        help="Required: Path to MATLAB Runtime Environment (MRE) directory."
-    )
-    parser.add_argument(
         '--participant-label', dest='subject_list', metavar='ID', nargs='+',
         help='optional list of participant ids to run. Default is all ids '
              'found under the bids input directory.  A participant label '
