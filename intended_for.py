@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import os, sys, argparse, subprocess, json
+from bids import BIDSLayout
 from itertools import product
 
 
@@ -45,8 +46,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, mre_dir,
-                debug=False, eta_square=False):
+def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, eta_square=False):
     pos = 'PA'
     neg = 'AP'
 
@@ -77,20 +77,22 @@ def sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir, mre_dir,
     for pair in zip(list_pos, list_neg):
         pairs.append(pair)
 
-    tasks = {}
-    for pair in pairs:
-        pos = pairs[0]
-        task = pos.split("task-")[1]
-        task = task.split("_")[0]
+    print(pairs)
+
+    # tasks = {}
+    # for pair in pairs:
+    #     pos = pairs[0]
+    #     task = pos.split("task-")[1]
+    #     task = task.split("_")[0]
     
-    pos_ref = pairs[0][0]
-    neg_ref = pairs[0][1]
+    # pos_ref = pairs[0][0]
+    # neg_ref = pairs[0][1]
     
-    if eta_square:
-        pass
-    else:
-        best_pos = pairs[-1][0]
-        best_neg = pairs[-1][1]
+    # if eta_square:
+    #     pass
+    # else:
+    #     best_pos = pairs[-1][0]
+    #     best_neg = pairs[-1][1]
 
     # return dictionary with keys being the run name and values being a pair
 
@@ -160,8 +162,22 @@ def generate_parser(parser=None):
     
     return parser
 
-def main():
-    print("main")
+def main(argv=sys.argv):
+    parser = generate_parser()
+    args = parser.parse_args()
+
+    layout = BIDSLayout(args.bids_dir)
+    fsl_dir = args.fsl_dir + '/bin'
+    subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
+    
+    for subject,sessions in subsess:
+        fmap = layout.get(subject=subject, session=sessions, datatype='fmap', extension='.nii.gz', acquisition='func')        
+        # Check if there are func fieldmaps and return a list of each SEFM pos/neg pair
+        if fmap:
+            print("Running SEFM select")
+            base_temp_dir = fmap[0].dirname
+        sefm_select(layout, subject, sessions, base_temp_dir, fsl_dir)
+
 
 if __name__ == "__main__":
     sys.exit(main())
