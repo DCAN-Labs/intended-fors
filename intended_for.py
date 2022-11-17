@@ -161,17 +161,16 @@ def main(argv=sys.argv):
         selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, strategy)
         json_field = 'IntendedFor'
         raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-        # func_list = [os.path.join(x.dirname, x.filename) for x in raw_func_list]
         func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
 
         selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
         selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-        print("raw_func_list :", raw_func_list)
-        print("func_list: ", func_list)
-        print("selected_pos_json: ", selected_pos_json)
-        print("selected_neg_json: ", selected_neg_json)
-        # insert_edit_json(selected_pos_json, json_field, func_list)
-        # insert_edit_json(selected_neg_json, json_field, func_list)
+        # print("raw_func_list :", raw_func_list)
+        # print("func_list: ", func_list)
+        # print("selected_pos_json: ", selected_pos_json)
+        # print("selected_neg_json: ", selected_neg_json)
+        insert_edit_json(selected_pos_json, json_field, func_list)
+        insert_edit_json(selected_neg_json, json_field, func_list)
 
 
 if __name__ == "__main__":
