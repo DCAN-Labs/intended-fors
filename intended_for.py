@@ -6,7 +6,7 @@ from itertools import product
 
 
 # Last modified
-last_modified = "Created by Anders Perrone 3/21/2017. Last modified 13/01/2019"
+last_modified = "Adapted from work by Anders Perrone 3/21/2017. Last modified 11/16/2022"
 
 # Program description
 prog_descrip =  """%(prog)s: sefm_eval pairs each of the pos/neg sefm and returns the pair that is most representative
@@ -46,7 +46,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
+def sefm_select(layout, subject, sessions, fsl_dir, strategy='last'):
     d = layout.__dict__
     print("layout: ", d)
     pos = 'PA'
@@ -72,29 +72,17 @@ def sefm_select(layout, subject, sessions, fsl_dir, eta_square=False):
     for pair in zip(list_pos, list_neg):
         pairs.append(pair)
 
-    # tasks = {}
-    # for pair in pairs:
-    #     pos = pairs[0]
-    #     task = pos.split("task-")[1]
-    #     task = task.split("_")[0]
-    
-    # pos_ref = pairs[0][0]
-    # neg_ref = pairs[0][1]
-    
-    # if eta_square:
-    #     #Make a temporary working directory
-    #     temp_dir = os.path.join(base_temp_dir, subject + '_eta_temp')
-    #     try:
-    #         os.mkdir(temp_dir)
-    #     except:
-    #         print(temp_dir + " already exists")
-    #         pass
-    # else:
-    last_pos = pairs[-1][0]
-    last_neg = pairs[-1][1]
+    selected_pos = ''
+    selected_neg = ''
 
-    # to-do: return dictionary with keys being the run name and values being a pair
-    return last_pos, last_neg
+    if strategy == 'last':
+        selected_pos = pairs[-1][0]
+        selected_neg = pairs[-1][1]
+
+    elif strategy == 'eta_square':
+        pass
+
+    return selected_pos, selected_neg
 
 def insert_edit_json(json_path, json_field, value):
     with open(json_path, 'r') as f:
@@ -147,8 +135,6 @@ def generate_parser(parser=None):
         '-v', '--version', action='version', version=last_modified,
         help="Return script's last modified date."
     )
-
-    # Added by Greg Conan 2019-11-04
     parser.add_argument(
         '-o', '--output_dir', default='./data/',
         help=('Directory where necessary .json files live, including '
@@ -164,20 +150,21 @@ def main(argv=sys.argv):
     layout = BIDSLayout(args.bids_dir)
     fsl_dir = args.fsl_dir + '/bin'
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
+    strategy = args.strategy
     
     for subject,sessions in subsess:
-        last_pos, last_neg = sefm_select(layout, subject, sessions, fsl_dir)
+        selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, strategy)
         json_field = 'IntendedFor'
         raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
         func_list = [os.path.join(x.dirname, x.filename) for x in raw_func_list]
 
-        last_pos_json = f"{last_pos.split('.nii.gz')[0]}.json"
-        last_neg_json = f"{last_neg.split('.nii.gz')[0]}.json"
+        selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
+        selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
         print("func_list: ", func_list)
-        print("last_pos_json: ", last_pos_json)
-        print("last_neg_json: ", last_neg_json)
-        # insert_edit_json(last_pos_json, json_field, func_list)
-        # insert_edit_json(last_neg_json, json_field, func_list)
+        print("selected_pos_json: ", selected_pos_json)
+        print("selected_neg_json: ", selected_neg_json)
+        # insert_edit_json(selected_pos_json, json_field, func_list)
+        # insert_edit_json(selected_neg_json, json_field, func_list)
 
 
 if __name__ == "__main__":
