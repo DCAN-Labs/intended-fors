@@ -63,6 +63,7 @@ def sefm_select(layout, subject, sessions, fsl_dir, strategy='last'):
     list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
     list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
 
+
     try:
         len(list_pos) == len(list_neg)
     except:
@@ -150,7 +151,6 @@ def generate_parser(parser=None):
 def main(argv=sys.argv):
     parser = generate_parser()
     args = parser.parse_args()
-    print(args)
 
     layout = BIDSLayout(args.bids_dir)
     fsl_dir = args.fsl_dir + '/bin'
@@ -158,18 +158,21 @@ def main(argv=sys.argv):
     strategy = args.strategy
     
     for subject,sessions in subsess:
-        selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, strategy)
-        json_field = 'IntendedFor'
-        raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-        func_list = [os.path.join(x.dirname, x.filename) for x in raw_func_list]
+        for session in sessions:
+            selected_pos, selected_neg = sefm_select(layout, subject, session, fsl_dir, strategy)
+            json_field = 'IntendedFor'
+            raw_func_list = layout.get(subject=subject, session=session, datatype='func', extension='.nii.gz')
+            # func_list = [os.path.join(x.dirname, x.filename) for x in raw_func_list]
+            func_list = [f"ses-{session}/func/{x.filename}" for x in raw_func_list]
 
-        selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
-        selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-        print("func_list: ", func_list)
-        print("selected_pos_json: ", selected_pos_json)
-        print("selected_neg_json: ", selected_neg_json)
-        # insert_edit_json(selected_pos_json, json_field, func_list)
-        # insert_edit_json(selected_neg_json, json_field, func_list)
+            selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
+            selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
+            print("raw_func_list :", raw_func_list)
+            print("func_list: ", func_list)
+            print("selected_pos_json: ", selected_pos_json)
+            print("selected_neg_json: ", selected_neg_json)
+            # insert_edit_json(selected_pos_json, json_field, func_list)
+            # insert_edit_json(selected_neg_json, json_field, func_list)
 
 
 if __name__ == "__main__":
