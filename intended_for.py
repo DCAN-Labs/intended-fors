@@ -150,6 +150,7 @@ def generate_parser(parser=None):
 def main(argv=sys.argv):
     parser = generate_parser()
     args = parser.parse_args()
+    print(args)
 
     layout = BIDSLayout(args.bids_dir)
     fsl_dir = args.fsl_dir + '/bin'
