@@ -46,7 +46,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, fsl_dir, strategy='last'):
+def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
     # d = layout.__dict__
     # print("layout: ", d)
     pos = 'PA'
@@ -55,13 +55,19 @@ def sefm_select(layout, subject, sessions, fsl_dir, strategy='last'):
     # Add trailing slash to fsl_dir variable if it's not present
     if fsl_dir[-1] != "/":
         fsl_dir += "/"
-
+    
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
-    pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-    neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
-    list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
-    list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+    if task:
+        pos_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=pos, extension='.nii.gz')
+        neg_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=neg, extension='.nii.gz')
+        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
+        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+    else:
+        pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
+        neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
+        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
+        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
 
 
     try:
@@ -123,6 +129,10 @@ def generate_parser(parser=None):
         help='which strategy to use, "last", "eta_squared"'
     )
     parser.add_argument(
+        'tasks',
+        help="a list of tasks to loop through."
+    )
+    parser.add_argument(
         '--participant-label', dest='subject_list', metavar='ID', nargs='+',
         help='optional list of participant ids to run. Default is all ids '
              'found under the bids input directory.  A participant label '
@@ -156,22 +166,47 @@ def main(argv=sys.argv):
     fsl_dir = args.fsl_dir + '/bin'
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
     strategy = args.strategy
+    debug = args.debug
+    tasks = args.tasks
     
-    for subject,sessions in subsess:
-        selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, strategy)
-        json_field = 'IntendedFor'
-        raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-        func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
+    if tasks:
+        for task in tasks:
+            for subject,sessions in subsess:
+                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy)
+                json_field = 'IntendedFor'
+                raw_func_list = layout.get(subject=subject, session=sessions, task=task, datatype='func', extension='.nii.gz')
+                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
 
-        selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
-        selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-        # print("raw_func_list :", raw_func_list)
-        # print("func_list: ", func_list)
-        # print("selected_pos_json: ", selected_pos_json)
-        # print("selected_neg_json: ", selected_neg_json)
-        insert_edit_json(selected_pos_json, json_field, func_list)
-        insert_edit_json(selected_neg_json, json_field, func_list)
+                selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
+                selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
 
+                if debug:
+                    print("raw_func_list :", raw_func_list)
+                    print("func_list: ", func_list)
+                    print("selected_pos_json: ", selected_pos_json)
+                    print("selected_neg_json: ", selected_neg_json)
+                else:
+                    insert_edit_json(selected_pos_json, json_field, func_list)
+                    insert_edit_json(selected_neg_json, json_field, func_list)
+    else:
+        
+        for subject,sessions in subsess:
+            selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, '', strategy)
+            json_field = 'IntendedFor'
+            raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+            func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
+
+            selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
+            selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
+
+            if debug:
+                print("raw_func_list :", raw_func_list)
+                print("func_list: ", func_list)
+                print("selected_pos_json: ", selected_pos_json)
+                print("selected_neg_json: ", selected_neg_json)
+            else:
+                insert_edit_json(selected_pos_json, json_field, func_list)
+                insert_edit_json(selected_neg_json, json_field, func_list)
 
 if __name__ == "__main__":
     sys.exit(main())
