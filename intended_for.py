@@ -65,12 +65,20 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
         neg_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
         list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+        print("pos_func_maps :", pos_func_fmaps)
+        print("neg_func_maps: ", neg_func_fmaps)
+        print("list_pos: ", list_pos)
+        print("list_neg: ", list_neg)
     else:
         print("no task")
         pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
         neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
         list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+        print("pos_func_maps :", pos_func_fmaps)
+        print("neg_func_maps: ", neg_func_fmaps)
+        print("list_pos: ", list_pos)
+        print("list_neg: ", list_neg)
 
 
     try:
