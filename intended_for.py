@@ -47,8 +47,9 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
 
 
 def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
-    # d = layout.__dict__
-    # print("layout: ", d)
+    d = layout.__dict__
+    print("layout: ", d)
+    print("task: ", task)
     pos = 'PA'
     neg = 'AP'
 
@@ -59,11 +60,13 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
     if task:
+        print("task")
         pos_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=pos, extension='.nii.gz')
         neg_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
         list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
     else:
+        print("no task")
         pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
         neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
