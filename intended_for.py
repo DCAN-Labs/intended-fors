@@ -132,8 +132,8 @@ def generate_parser(parser=None):
         help='which strategy to use, "last", "eta_squared"'
     )
     parser.add_argument(
-        'tasks',
-        help="a list of tasks to loop through."
+        '--tasks', dest='tasks', nargs="+"
+        help="an optional list of tasks to loop through."
     )
     parser.add_argument(
         '--participant-label', dest='subject_list', metavar='ID', nargs='+',
