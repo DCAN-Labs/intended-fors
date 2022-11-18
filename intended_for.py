@@ -93,6 +93,9 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
     for pair in zip(list_pos, list_neg):
         pairs.append(pair)
 
+    if not pairs:
+        print("No files found with the givien parameters.")
+
     selected_pos = ''
     selected_neg = ''
 
@@ -186,10 +189,34 @@ def main(argv=sys.argv):
     if tasks:
         for task in tasks:
             for subject,sessions in subsess:
-                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug)
+                try:
+                    selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug)
+                    json_field = 'IntendedFor'
+                    raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+                    func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
+
+                    selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
+                    selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
+
+                    if debug:
+                        print("raw_func_list :", raw_func_list)
+                        print("func_list: ", func_list)
+                        print("selected_pos_json: ", selected_pos_json)
+                        print("selected_neg_json: ", selected_neg_json)
+                    else:
+                        insert_edit_json(selected_pos_json, json_field, func_list)
+                        insert_edit_json(selected_neg_json, json_field, func_list)
+
+                except Exception as e:
+                    print(f"Error finding {subject}, {sessions}.", e)
+    else:
+        
+        for subject,sessions in subsess:
+            try:
+                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, '', strategy, debug)
                 json_field = 'IntendedFor'
                 raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
+                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
 
                 selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
                 selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
@@ -202,25 +229,8 @@ def main(argv=sys.argv):
                 else:
                     insert_edit_json(selected_pos_json, json_field, func_list)
                     insert_edit_json(selected_neg_json, json_field, func_list)
-    else:
-        
-        for subject,sessions in subsess:
-            selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, '', strategy)
-            json_field = 'IntendedFor'
-            raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-            func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
-
-            selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
-            selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-
-            if debug:
-                print("raw_func_list :", raw_func_list)
-                print("func_list: ", func_list)
-                print("selected_pos_json: ", selected_pos_json)
-                print("selected_neg_json: ", selected_neg_json)
-            else:
-                insert_edit_json(selected_pos_json, json_field, func_list)
-                insert_edit_json(selected_neg_json, json_field, func_list)
+            except Exception as e:
+                print(f"Error finding {subject}, {sessions}.", e)
 
 if __name__ == "__main__":
     sys.exit(main())
