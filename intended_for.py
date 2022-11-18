@@ -61,38 +61,45 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
     if task:
         pos_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and pos in file]
         neg_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and neg in file]
-        # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-        # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(fmap_dir, pos_file) for pos_file in pos_func_fmaps if f'desc-{task}' in pos_file]
         list_neg = [os.path.join(fmap_dir, neg_file) for neg_file in neg_func_fmaps if f'desc-{task}' in neg_file]
+        sorted_list_pos = sorted(list_pos, key=lambda item: (int(item.partition(' ')[0])
+                                   if item[0].isdigit() else float('inf'), item))
+        sorted_list_neg = r = sorted(list_neg, key=lambda item: (int(item.partition(' ')[0])
+                                   if item[0].isdigit() else float('inf'), item))
         if debug:
             print("task: ", task)
             print("pos_func_maps :", pos_func_fmaps)
             print("neg_func_maps: ", neg_func_fmaps)
             print("list_pos: ", list_pos)
             print("list_neg: ", list_neg)
+            print("sorted_list_pos: ", sorted_list_pos)
+            print("sorted_list_neg: ", sorted_list_neg)
     else:
         pos_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and pos in file]
         neg_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and neg in file]
-        # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-        # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(fmap_dir, pos_file) for pos_file in pos_func_fmaps]
         list_neg = [os.path.join(fmap_dir, neg_file) for neg_file in neg_func_fmaps]
+        sorted_list_pos = sorted(list_pos, key=lambda item: (int(item.partition(' ')[0])
+                                   if item[0].isdigit() else float('inf'), item))
+        sorted_list_neg = r = sorted(list_neg, key=lambda item: (int(item.partition(' ')[0])
+                                   if item[0].isdigit() else float('inf'), item))
         if debug:
             print("no task")
             print("pos_func_maps :", pos_func_fmaps)
             print("neg_func_maps: ", neg_func_fmaps)
             print("list_pos: ", list_pos)
             print("list_neg: ", list_neg)
-
+            print("sorted_list_pos: ", sorted_list_pos)
+            print("sorted_list_neg: ", sorted_list_neg)
 
     try:
-        len(list_pos) == len(list_neg)
+        len(sorted_list_pos) == len(sorted_list_neg)
     except:
         print("ERROR in SEFM select: There are a mismatched number of SEFMs. This should never happen!")
     
     pairs = []
-    for pair in zip(list_pos, list_neg):
+    for pair in zip(sorted_list_pos, sorted_list_neg):
         pairs.append(pair)
 
     if not pairs:
