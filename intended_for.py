@@ -49,7 +49,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
 def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
     if debug:
         d = layout.__dict__
-        print("layout: ", json.dumps(d, indent=4))
+        print("layout: ", d)
         print("task: ", task)
     pos = 'PA'
     neg = 'AP'
