@@ -46,11 +46,9 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
-    if debug:
-        d = layout.__dict__
-        print("layout: ", d)
-        print("task: ", task)
+def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
+    fmap_dir = os.path.join(bids_dir, f"sub-{subject}", f"ses-{sessions}", "fmap")
+
     pos = 'PA'
     neg = 'AP'
 
@@ -61,21 +59,25 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
     if task:
-        pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-        neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
-        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps if f'task-{task}' in x.filename]
-        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps if f'task-{task}' in y.filename]
+        pos_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and pos in file]
+        neg_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and neg in file]
+        # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
+        # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
+        list_pos = [os.path.join(fmap_dir, pos_file) for pos_file in pos_func_fmaps if f'desc-{task}' in pos_file]
+        list_neg = [os.path.join(fmap_dir, neg_file) for neg_file in neg_func_fmaps if f'desc-{task}' in neg_file]
         if debug:
-            print("task")
+            print("task: ", task)
             print("pos_func_maps :", pos_func_fmaps)
             print("neg_func_maps: ", neg_func_fmaps)
             print("list_pos: ", list_pos)
             print("list_neg: ", list_neg)
     else:
-        pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
-        neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
-        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
-        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+        pos_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and pos in file]
+        neg_func_fmaps = [file for file in os.listdir(fmap_dir) if ".nii.gz" in file and neg in file]
+        # pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
+        # neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
+        list_pos = [os.path.join(fmap_dir, pos_file) for pos_file in pos_func_fmaps]
+        list_neg = [os.path.join(fmap_dir, neg_file) for neg_file in neg_func_fmaps]
         if debug:
             print("no task")
             print("pos_func_maps :", pos_func_fmaps)
@@ -178,8 +180,8 @@ def generate_parser(parser=None):
 def main(argv=sys.argv):
     parser = generate_parser()
     args = parser.parse_args()
-
-    layout = BIDSLayout(args.bids_dir)
+    bids_dir = args.bids_dir
+    layout = BIDSLayout(bids_dir)
     fsl_dir = args.fsl_dir + '/bin'
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
     strategy = args.strategy
@@ -190,7 +192,7 @@ def main(argv=sys.argv):
         for task in tasks:
             for subject,sessions in subsess:
                 try:
-                    selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug)
+                    selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug)
                     json_field = 'IntendedFor'
                     raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
                     func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
