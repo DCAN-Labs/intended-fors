@@ -215,7 +215,7 @@ def main(argv=sys.argv):
         
         for subject,sessions in subsess:
             try:
-                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, '', strategy, debug)
+                selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, '', strategy, debug)
                 json_field = 'IntendedFor'
                 raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
                 func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
