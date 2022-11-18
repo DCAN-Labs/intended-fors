@@ -61,11 +61,10 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
     if task:
-        #To Do: look for examples of how to use layout.get for tasks
-        pos_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=pos, extension='.nii.gz')
-        neg_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=neg, extension='.nii.gz')
-        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
-        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
+        pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
+        neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
+        list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps if f'task-{task}' in x.filename]
+        list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps if f'task-{task}' in x.filename]
         if debug:
             print("task")
             print("pos_func_maps :", pos_func_fmaps)
@@ -189,8 +188,8 @@ def main(argv=sys.argv):
             for subject,sessions in subsess:
                 selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug)
                 json_field = 'IntendedFor'
-                raw_func_list = layout.get(subject=subject, session=sessions, task=task, datatype='func', extension='.nii.gz')
-                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
+                raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
+                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
 
                 selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
                 selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
