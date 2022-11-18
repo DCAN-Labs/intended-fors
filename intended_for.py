@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 
-import os, sys, argparse, subprocess, json
+import os, sys, argparse, json
 from bids import BIDSLayout
 from itertools import product
 
 
 # Last modified
-last_modified = "Adapted from work by Anders Perrone 3/21/2017. Last modified 11/16/2022"
+last_modified = "Adapted from work by Anders Perrone 3/21/2017. Last modified 11/18/2022"
 
 # Program description
 prog_descrip =  """%(prog)s: sefm_eval pairs each of the pos/neg sefm and returns the pair that is most representative
@@ -46,10 +46,11 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
-    d = layout.__dict__
-    print("layout: ", d)
-    print("task: ", task)
+def sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug):
+    if debug:
+        d = layout.__dict__
+        print("layout: ", json.dumps(d, indent=4))
+        print("task: ", task)
     pos = 'PA'
     neg = 'AP'
 
@@ -60,25 +61,28 @@ def sefm_select(layout, subject, sessions, fsl_dir, task, strategy='last'):
 
     print("Pairing for subject " + subject + ": " + subject + ", " + sessions)
     if task:
-        print("task")
+        #To Do: look for examples of how to use layout.get for tasks
         pos_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=pos, extension='.nii.gz')
         neg_func_fmaps = layout.get(subject=subject, session=sessions, task=task, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
         list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
-        print("pos_func_maps :", pos_func_fmaps)
-        print("neg_func_maps: ", neg_func_fmaps)
-        print("list_pos: ", list_pos)
-        print("list_neg: ", list_neg)
+        if debug:
+            print("task")
+            print("pos_func_maps :", pos_func_fmaps)
+            print("neg_func_maps: ", neg_func_fmaps)
+            print("list_pos: ", list_pos)
+            print("list_neg: ", list_neg)
     else:
-        print("no task")
         pos_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=pos, extension='.nii.gz')
         neg_func_fmaps = layout.get(subject=subject, session=sessions, datatype='fmap', direction=neg, extension='.nii.gz')
         list_pos = [os.path.join(x.dirname, x.filename) for x in pos_func_fmaps]
         list_neg = [os.path.join(y.dirname, y.filename) for y in neg_func_fmaps]
-        print("pos_func_maps :", pos_func_fmaps)
-        print("neg_func_maps: ", neg_func_fmaps)
-        print("list_pos: ", list_pos)
-        print("list_neg: ", list_neg)
+        if debug:
+            print("no task")
+            print("pos_func_maps :", pos_func_fmaps)
+            print("neg_func_maps: ", neg_func_fmaps)
+            print("list_pos: ", list_pos)
+            print("list_neg: ", list_neg)
 
 
     try:
@@ -183,7 +187,7 @@ def main(argv=sys.argv):
     if tasks:
         for task in tasks:
             for subject,sessions in subsess:
-                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy)
+                selected_pos, selected_neg = sefm_select(layout, subject, sessions, fsl_dir, task, strategy, debug)
                 json_field = 'IntendedFor'
                 raw_func_list = layout.get(subject=subject, session=sessions, task=task, datatype='func', extension='.nii.gz')
                 func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
