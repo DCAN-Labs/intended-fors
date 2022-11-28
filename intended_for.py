@@ -48,9 +48,17 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
 
 def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
     fmap_dir = os.path.join(bids_dir, f"sub-{subject}", f"ses-{sessions}", "fmap")
+    # TODO: Get direction of functional images
+    func_dir = layout.get
 
-    pos = 'PA'
-    neg = 'AP'
+    if func_dir = 'PA':
+        pos = 'PA'
+        neg = 'AP'
+    elif func_dir = 'AP':
+        pos = 'AP'
+        neg = 'PA'
+    else:
+        print("Error: Acquistion direction not recognized")
 
     # Add trailing slash to fsl_dir variable if it's not present
     if fsl_dir[-1] != "/":
@@ -117,6 +125,37 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
 
     return selected_pos, selected_neg
 
+def pair_fmap(layout, subject, sessions):
+    # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
+    # If the functional image was acquired before the fmap then find the fmap pair with the closest series number
+    #
+    # Get all fmaps and paths.
+    # Pair using the run number, if no run number assert that there is only one pair
+    # Get the SeriesNumber for the "positive" fmap (both is not necessary since they are acquired sequentially)
+    #
+    # Loop through all functional images (specifically bold images) in /func
+    # Get the SeriesNumber for each functional image
+    #
+    # fmap_series_num_map = {24: ('run-01_AP', 'run-01_PA'), 30: ('run-02_AP', 'run-02_PA')}
+    # func_series_num_map = {14, 'run-01', 16: 'run-02', 33: 'run-03', 35: 'run-04'}
+    #
+    # i = 0
+    # curr_fmap = fmap_series_num_map[i]
+    # next_fmap = fmap_series_num_map[i + 1]
+    # j = 0
+    # curr_func = func_series_num_map[j]
+    # while j < len(func_seris_num_map):
+    #       if curr_func < next_fmap:
+    #           insert_edit_json(func_series_num_map[j], fmap_series_num_map[i])
+    #       if curr_func > next_fmap:
+    #           i += 1
+    #           insert_edit_json(func_series_num_map[j], fmap_series_num_map[i])
+    #       j += 1
+    # TODO: what to do when there is no next_fmap
+
+
+
+
 def insert_edit_json(json_path, json_field, value):
     with open(json_path, 'r') as f:
         data = json.load(f)
@@ -152,7 +191,10 @@ def generate_parser(parser=None):
     )
     parser.add_argument(
         'strategy',
-        help='which strategy to use, "last", "eta_squared"'
+        help='which strategy to use:'
+            '   "last": Use the last fmap that was acquired for all functional images'
+            '   "eta_squared": Calculate the variance of each fmap to an average to select the "best"'
+            '   "closest": Use the previously acquired fmap for the current functional image'
     )
     parser.add_argument(
         '--tasks', dest='tasks', nargs="+",
