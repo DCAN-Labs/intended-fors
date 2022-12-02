@@ -48,17 +48,9 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
 
 def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
     fmap_dir = os.path.join(bids_dir, f"sub-{subject}", f"ses-{sessions}", "fmap")
-    # TODO: Get direction of functional images
-    func_dir = layout.get
 
-    if func_dir == 'PA':
-        pos = 'PA'
-        neg = 'AP'
-    elif func_dir == 'AP':
-        pos = 'AP'
-        neg = 'PA'
-    else:
-        print("Error: Acquistion direction not recognized")
+    pos = 'AP'
+    neg = 'PA'
 
     # Add trailing slash to fsl_dir variable if it's not present
     if fsl_dir[-1] != "/":
@@ -125,50 +117,68 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
 
     return selected_pos, selected_neg
 
-def pair_fmap(layout, subject, session):
-    # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
-    # If the functional image was acquired before the fmap then find the fmap pair with the closest series number
+class pair_fmap:
 
-    func = layout.get(subject=subject, session=session, datatype='func', task='rest', suffix='bold', extension='.nii.gz')
-    func_series_nums = {f.get_metadata()['SeriesNumber']:f.path for f in func}
+    def __init__(self, layout, subject, session):
+        # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
+        # If the functional image was acquired before the fmap then find the fmap pair with the closest series number
+        self.layout = layout
+        self.subject = subject
+        self.session = session
 
+    def get_func(self):
+        return self.layout.get(subject=self.subject, session=self.session, datatype='func', task='rest', suffix='bold', extension='.nii.gz')
 
-    # Get list of BIDSDataFile fieldmaps
-    fmap = layout.get(subject=subject, session=session, datatype='fmap', extension='.nii.gz')
-    # Pair by run number
-    fmap_runs = {}
-    for f in fmap:
-        f_run = f.get_entities()['run']
-        if f_run in fmap_runs:
-            fmap_runs[f_run].append(f)
-        else:
-            fmap_runs[f_run] = [f]
-    # Make map of series number to pair
-    fmap_series_nums = {}
-    for run in fmap_runs:
-        min_series_number = min([f.get_metadata()['SeriesNumber'] for f in fmap_runs[run]])
-        fmap_series_nums[min_series_number] = [f.path for f in fmap_runs[run]]
+    def get_fmap_runs(self):
+        fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.nii.gz')
+        # Pair by run number
+        fmap_runs = {}
+        for f in fmap:
+            f_run = f.get_entities()['run']
+            if f_run in fmap_runs:
+                fmap_runs[f_run].append(f)
+            else:
+                fmap_runs[f_run] = [f]
+        return fmap_runs
 
-    fmap_keys = sorted(fmap_series_nums)
-    func_keys = sorted(func_series_nums)
-    fmap_iter = 0
-    # Iterate over each functional image
-    for func_iter in range(len(func_keys)):
-        # If the current fmap iter is at the end then insert current fmaps
-        if fmap_iter == len(fmap_keys) - 1:
-            print('{} intended for {}'.format(fmap_series_nums[fmap_keys[fmap_iter]], func_series_nums[func_keys[func_iter]]))
-            insert_edit_json(func_series_nums[func_keys[func_iter]], fmap_series_nums[fmap_keys[fmap_iter]], 'IntendedFor')
-        # Else insert if the func series number is less than the series number of the next fieldmap
-        elif func_keys[func_iter] < fmap_keys[fmap_iter + 1]:
-            print('{} intended for {}'.format(fmap_series_nums[fmap_keys[fmap_iter]], func_series_nums[func_keys[func_iter]]))
-            insert_edit_json(func_series_nums[func_keys[func_iter]], fmap_series_nums[fmap_keys[fmap_iter]], 'IntendedFor')
-        # Else insert the next fieldmap and increment the field map counter
-        else:
-            print('{} intended for {}'.format(fmap_series_nums[fmap_keys[fmap_iter + 1]], func_series_nums[func_keys[func_iter]]))
-            insert_edit_json(func_series_nums[func_keys[func_iter]], fmap_series_nums[fmap_keys[fmap_iter + 1]], 'IntendedFor')
-            fmap_iter += 1
-    return
+    def pair_by_eta_squared(self):
+        # TODO
+        return
 
+    def pair_by_task(self):
+        # TODO
+        return
+
+    def pair_by_last(self):
+        return fmap_runs[sorted(fmap_keys)[-1]]
+        
+    def pair_by_closest(self):
+        fmap_runs = self.get_fmap_runs()
+        # Return a hash map of functional run to field maps
+        # Make map of series number to pair
+        fmap_series_nums = {}
+        for run in fmap_runs:
+            min_series_number = min([f.get_metadata()['SeriesNumber'] for f in fmap_runs[run]])
+            fmap_series_nums[min_series_number] = [f.path for f in fmap_runs[run]]
+
+        func = self.get_func()
+        func_series_nums = {f.get_metadata()['SeriesNumber']:f.path for f in func}
+
+        fmap_keys = sorted(fmap_series_nums)
+        func_keys = sorted(func_series_nums)
+        fmap_iter = 0
+
+        pairing = {}
+        # Iterate over each functional image
+        for func_iter in range(len(func_keys)):
+            # If the current fmap iter is at the end then insert current fmaps or if the func series number is less than the series number of the next fieldmap
+            if fmap_iter == len(fmap_keys) - 1 or func_keys[func_iter] < fmap_keys[fmap_iter + 1]:
+                pairing[func_series_nums[func_keys[func_iter]]] = fmap_series_nums[fmap_keys[fmap_iter]]
+            # Else insert the next fieldmap and increment the field map counter
+            else:
+                fmap_iter += 1
+                pairing[func_series_nums[func_keys[func_iter]]] = fmap_series_nums[fmap_keys[fmap_iter]]
+        return pairing
 
 
 def insert_edit_json(json_path, json_field, value):
@@ -182,7 +192,6 @@ def insert_edit_json(json_path, json_field, value):
     data[json_field] = value
     with open(json_path, 'w') as f:    
         json.dump(data, f, indent=4)
-
     return
 
 def generate_parser(parser=None):
@@ -251,7 +260,7 @@ def main(argv=sys.argv):
     strategy = args.strategy
     debug = args.debug
     tasks = args.tasks
-    
+
     if tasks:
         for task in tasks:
             for subject,sessions in subsess:
