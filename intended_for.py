@@ -46,7 +46,7 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     return subsess
 
 
-def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
+def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug, layout):
     fmap_dir = os.path.join(bids_dir, f"sub-{subject}", f"ses-{sessions}", "fmap")
 
     pos = 'AP'
@@ -114,6 +114,9 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug):
 
     elif strategy == 'eta_square':
         pass
+
+    elif strategy == 'closest':
+        pair_fmap(layout, subject, sessions)
 
     return selected_pos, selected_neg
 
@@ -265,7 +268,7 @@ def main(argv=sys.argv):
         for task in tasks:
             for subject,sessions in subsess:
                 try:
-                    selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug)
+                    selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug, layout)
                     json_field = 'IntendedFor'
                     raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
                     func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
@@ -288,7 +291,7 @@ def main(argv=sys.argv):
         
         for subject,sessions in subsess:
             try:
-                selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, '', strategy, debug)
+                selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, '', strategy, debug, layout)
                 json_field = 'IntendedFor'
                 raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
                 func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
