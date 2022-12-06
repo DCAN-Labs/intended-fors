@@ -231,10 +231,6 @@ def generate_parser(parser=None):
              'the dcan bids gui or Dcm2Bids to convert from participant dicoms.'
     )
     parser.add_argument(
-        'fsl_dir',
-        help="Required: Path to FSL directory."
-    )
-    parser.add_argument(
         'strategy',
         help='which strategy to use:'
             '   "last": Use the last fmap that was acquired for all functional images'
@@ -242,32 +238,23 @@ def generate_parser(parser=None):
             '   "closest": Use the previously acquired fmap for the current functional image'
     )
     parser.add_argument(
-        '--tasks', dest='tasks', nargs="+",
-        help="an optional list of tasks to loop through."
-    )
-    parser.add_argument(
-        '--participant-label', dest='subject_list', metavar='ID', nargs='+',
-        help='optional list of participant ids to run. Default is all ids '
+        '--participant-labels', dest='subject_list', nargs='+',
+        help='Optional list of participant ids to run. Default is all ids '
              'found under the bids input directory.  A participant label '
              'does not include "sub-"'
     )
     parser.add_argument(
-        '-a','--all-sessions', dest='collect', action='store_true',
-        help='collapses all sessions into one when running a subject.'
+        '--session-labels', dest='session_list', nargs='+'
+        help='Optional list of session ids to run for a given subject or all '
+             'subjects if --participant-label is not specified. Default is to '
+             'run on all sessions of each given subject. A session label does '
+             'not include "ses-"'
     )
     parser.add_argument(
-        '-d', '--debug', dest='debug', action='store_true', default=False,
-        help='debug mode, leaves behind the "eta_temp" directory.'
+        '--task-labels', dest='task_list', nargs="+",
+        help="An optional list of tasks to loop through."
     )
-    parser.add_argument(
-        '-v', '--version', action='version', version=last_modified,
-        help="Return script's last modified date."
-    )
-    parser.add_argument(
-        '-o', '--output_dir', default='./data/',
-        help=('Directory where necessary .json files live, including '
-              'dataset_description.json')
-    )
+
     
     return parser
 
