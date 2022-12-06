@@ -12,12 +12,11 @@ last_modified = "Adapted from work by Anders Perrone 3/21/2017. Last modified 11
 prog_descrip =  """%(prog)s: sefm_eval pairs each of the pos/neg sefm and returns the pair that is most representative
                    of the average by calculating the eta squared value for each sefm pair to the average sefm.""" + last_modified
 
-def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
+def read_bids_layout(layout, subject_list=None, session_list=None):
     """
     :param bids_input: path to input bids folder
     :param subject_list: a list of subject ids to filter on
-    :param collect_on_subject: collapses all sessions, for cases with
-    non-longitudinal data spread across scan sessions.
+    :param session_list: a list of session ids to filer on
     """
 
     subjects = layout.get_subjects()
@@ -33,9 +32,10 @@ def read_bids_layout(layout, subject_list=None, collect_on_subject=False):
     for s in subjects:
         sessions = layout.get_sessions(subject=s)
         if not sessions:
-            subsess += [(s, 'session')]
-        elif collect_on_subject:
-            subsess += [(s, sessions)]
+            print('WARNING: No sessions found for subject {}'.format(s))
+        elif session_list:
+            # Append tuple of subject and session only if the session is in the given session_list
+            subsess += [(s, session) for session in sessions if session in session_list]
         else:
             subsess += list(product([s], sessions))
 
@@ -255,15 +255,15 @@ def generate_parser(parser=None):
         help="An optional list of tasks to loop through."
     )
 
-    
     return parser
 
 def main(argv=sys.argv):
     parser = generate_parser()
     args = parser.parse_args()
+
     bids_dir = args.bids_dir
     layout = BIDSLayout(bids_dir)
-    fsl_dir = args.fsl_dir + '/bin'
+
     subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
     strategy = args.strategy
     debug = args.debug
