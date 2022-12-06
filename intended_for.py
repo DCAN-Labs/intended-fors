@@ -116,11 +116,15 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug, lay
         pass
 
     elif strategy == 'closest':
-        pair_fmap(layout, subject, sessions)
+        x = pair_fmap(layout, subject, sessions)
+        func_fmap_map = x.pair_by_closest()
+        for f in func_fmap_map:
+            json_f = f.replace('.nii.gz', '.json')
+            insert_edit_json(json_f, 'IntendedFor', func_fmap_map[f])
 
     return selected_pos, selected_neg
 
-class pair_fmap:
+class FieldmapPairing(object):
 
     def __init__(self, layout, subject, session):
         # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
@@ -129,11 +133,19 @@ class pair_fmap:
         self.subject = subject
         self.session = session
 
-    def get_func(self):
-        return self.layout.get(subject=self.subject, session=self.session, datatype='func', task='rest', suffix='bold', extension='.nii.gz')
+    def get_func(self, task=None):
+        if task:
+            print('Returning functional images for task: {}'.format(task))
+            return self.layout.get(subject=self.subject, session=self.session, datatype='func', task=task, suffix='bold', extension='.nii.gz')
+        else:
+            print('Returning all functional tasks')
+            return self.layout.get(subject=self.subject, session=self.session, datatype='func', suffix='bold', extension='.nii.gz')
 
-    def get_fmap_runs(self):
-        fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.nii.gz')
+    def get_fmap_runs(self, task=None):
+        if task:
+            fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=task, datatype='fmap', extension='.json')
+        else:
+            fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
         # Pair by run number
         fmap_runs = {}
         for f in fmap:
@@ -148,12 +160,19 @@ class pair_fmap:
         # TODO
         return
 
-    def pair_by_task(self):
-        # TODO
+    def pair_by_task(self, task=None):
+        # TODO We don't need this function if images are already trimmed down.
         return
 
-    def pair_by_last(self):
-        return fmap_runs[sorted(fmap_keys)[-1]]
+    def pair_by_last(self, task=None):
+        func = self.get_func(task=task)
+        fmap = self.get_fmap_runs(task=task)
+        last_fmap_pair = fmap[sorted(fmap.keys())[-1]]
+        pairing = {}
+        func_paths = [f.path for f in func]
+        for f in last_fmap_pair:
+            self.insert_edit_json(f, 'IntendedFor', func_paths)
+        return 
         
     def pair_by_closest(self):
         fmap_runs = self.get_fmap_runs()
@@ -183,19 +202,18 @@ class pair_fmap:
                 pairing[func_series_nums[func_keys[func_iter]]] = fmap_series_nums[fmap_keys[fmap_iter]]
         return pairing
 
-
-def insert_edit_json(json_path, json_field, value):
-    with open(json_path, 'r') as f:
-        data = json.load(f)
-    if json_field in data and data[json_field] != value:
-        print('WARNING: Replacing {}: {} with {} in {}'.format(json_field, data[json_field], value, json_path))
-    else:
-        print('Inserting {}: {} in {}'.format(json_field, value, json_path))
-        
-    data[json_field] = value
-    with open(json_path, 'w') as f:    
-        json.dump(data, f, indent=4)
-    return
+    def insert_edit_json(self, json_path, json_field, value):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        if json_field in data and data[json_field] != value:
+            print('WARNING: Replacing {}: {} with {} in {}'.format(json_field, data[json_field], value, json_path))
+        else:
+            print('Inserting {}: {} in {}'.format(json_field, value, json_path))
+            
+        data[json_field] = value
+        with open(json_path, 'w') as f:    
+            json.dump(data, f, indent=4)
+        return
 
 def generate_parser(parser=None):
     """
