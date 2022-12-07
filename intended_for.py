@@ -126,27 +126,37 @@ def sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug, lay
 
 class FieldmapPairing(object):
 
-    def __init__(self, layout, subject, session):
+    def __init__(self, layout, subject, session, strategy, task=None):
         # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
         # If the functional image was acquired before the fmap then find the fmap pair with the closest series number
         self.layout = layout
         self.subject = subject
         self.session = session
+        self.task = task
 
-    def get_func(self, task=None):
-        if task:
-            print('Returning functional images for task: {}'.format(task))
-            return self.layout.get(subject=self.subject, session=self.session, datatype='func', task=task, suffix='bold', extension='.nii.gz')
+        if strategy == 'closest':
+            self.pair_by_closest()
+        elif strategy == 'eta_squared':
+            self.pair_by_eta()
+        elif strategy == 'last':
+            self.pair_by_last()
         else:
-            print('Returning all functional tasks')
+            print('ERROR: Strategy not recognized')
+
+    def get_func(self):
+        if self.task:
+            #print('Returning functional images for task: {}'.format(task))
+            return self.layout.get(subject=self.subject, session=self.session, datatype='func', task=self.task, suffix='bold', extension='.nii.gz')
+        else:
+            #print('Returning all functional tasks')
             return self.layout.get(subject=self.subject, session=self.session, datatype='func', suffix='bold', extension='.nii.gz')
 
-    def get_fmap_runs(self, task=None):
-        if task:
-            fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=task, datatype='fmap', extension='.json')
+    def get_fmap_runs(self):
+        if self.task:
+            fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
         else:
             fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
-        # Pair by run number
+        # Pair all fmaps by run number
         fmap_runs = {}
         for f in fmap:
             f_run = f.get_entities()['run']
@@ -160,13 +170,9 @@ class FieldmapPairing(object):
         # TODO
         return
 
-    def pair_by_task(self, task=None):
-        # TODO We don't need this function if images are already trimmed down.
-        return
-
-    def pair_by_last(self, task=None):
-        func = self.get_func(task=task)
-        fmap = self.get_fmap_runs(task=task)
+    def pair_by_last(self):
+        func = self.get_func(task=self.task)
+        fmap = self.get_fmap_runs(task=self.task)
         last_fmap_pair = fmap[sorted(fmap.keys())[-1]]
         pairing = {}
         func_paths = [f.path for f in func]
@@ -252,7 +258,9 @@ def generate_parser(parser=None):
     )
     parser.add_argument(
         '--task-labels', dest='task_list', nargs="+",
-        help="An optional list of tasks to loop through."
+        help='An optional list of tasks to loop through. Note: Only specify '
+             'task if the fieldmaps have a corresponding "acq-" entity that '
+             'contains the same task name.'
     )
 
     return parser
@@ -264,54 +272,23 @@ def main(argv=sys.argv):
     bids_dir = args.bids_dir
     layout = BIDSLayout(bids_dir)
 
-    subsess = read_bids_layout(layout, subject_list=args.subject_list, collect_on_subject=args.collect)
+    # Create a list of tuples for all subjects and sessions
+    subsess = read_bids_layout(layout, subject_list=args.subject_list, session_list=args.session_list)
+
     strategy = args.strategy
-    debug = args.debug
     tasks = args.tasks
 
     if tasks:
         for task in tasks:
-            for subject,sessions in subsess:
+            for subject,session in subsess:
                 try:
-                    selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, task, strategy, debug, layout)
-                    json_field = 'IntendedFor'
-                    raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-                    func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list if f"task-{task}" in x.filename]
-
-                    selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
-                    selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-
-                    if debug:
-                        print("raw_func_list :", raw_func_list)
-                        print("func_list: ", func_list)
-                        print("selected_pos_json: ", selected_pos_json)
-                        print("selected_neg_json: ", selected_neg_json)
-                    else:
-                        insert_edit_json(selected_pos_json, json_field, func_list)
-                        insert_edit_json(selected_neg_json, json_field, func_list)
-
+                    p = FieldmapPairing(layout, subject, session, strategy)
                 except Exception as e:
-                    print(f"Error finding {subject}, {sessions}.", e)
+                    print(f"Error finding {subject}, {session}.", e)
     else:
-        
         for subject,sessions in subsess:
             try:
-                selected_pos, selected_neg = sefm_select(bids_dir, subject, sessions, fsl_dir, '', strategy, debug, layout)
-                json_field = 'IntendedFor'
-                raw_func_list = layout.get(subject=subject, session=sessions, datatype='func', extension='.nii.gz')
-                func_list = [f"ses-{sessions}/func/{x.filename}" for x in raw_func_list]
-
-                selected_pos_json = f"{selected_pos.split('.nii.gz')[0]}.json"
-                selected_neg_json = f"{selected_neg.split('.nii.gz')[0]}.json"
-
-                if debug:
-                    print("raw_func_list :", raw_func_list)
-                    print("func_list: ", func_list)
-                    print("selected_pos_json: ", selected_pos_json)
-                    print("selected_neg_json: ", selected_neg_json)
-                else:
-                    insert_edit_json(selected_pos_json, json_field, func_list)
-                    insert_edit_json(selected_neg_json, json_field, func_list)
+                    p = FieldmapPairing(layout, subject, session, strategy)
             except Exception as e:
                 print(f"Error finding {subject}, {sessions}.", e)
 
