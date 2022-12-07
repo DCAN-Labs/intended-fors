@@ -4,47 +4,12 @@ import os, sys, argparse, json
 from bids import BIDSLayout
 from itertools import product
 
-
 # Last modified
 last_modified = "Adapted from work by Anders Perrone 3/21/2017. Last modified 11/18/2022"
 
 # Program description
 prog_descrip =  """%(prog)s: sefm_eval pairs each of the pos/neg sefm and returns the pair that is most representative
                    of the average by calculating the eta squared value for each sefm pair to the average sefm.""" + last_modified
-
-def read_bids_layout(layout, subject_list=None, session_list=None):
-    """
-    :param bids_input: path to input bids folder
-    :param subject_list: a list of subject ids to filter on
-    :param session_list: a list of session ids to filer on
-    """
-
-    subjects = layout.get_subjects()
-
-    # filter subject list
-    if isinstance(subject_list, list):
-        subjects = [s for s in subjects if s in subject_list]
-    elif isinstance(subject_list, dict):
-        subjects = [s for s in subjects if s in subject_list.keys()]
-
-    subsess = []
-    # filter session list
-    for s in subjects:
-        sessions = layout.get_sessions(subject=s)
-        if not sessions:
-            print('WARNING: No sessions found for subject {}'.format(s))
-        elif session_list:
-            # Append tuple of subject and session only if the session is in the given session_list
-            subsess += [(s, session) for session in sessions if session in session_list]
-        else:
-            subsess += list(product([s], sessions))
-
-    assert len(subsess), 'bids data not found for participants. If labels ' \
-            'were provided, check the participant labels for errors.  ' \
-            'Otherwise check that the bids folder provided is correct.'
-
-    return subsess
-
 
 class FieldmapPairing(object):
 
@@ -142,6 +107,39 @@ class FieldmapPairing(object):
         with open(json_path, 'w') as f:    
             json.dump(data, f, indent=4)
         return
+
+def read_bids_layout(layout, subject_list=None, session_list=None):
+    """
+    :param bids_input: path to input bids folder
+    :param subject_list: a list of subject ids to filter on
+    :param session_list: a list of session ids to filer on
+    """
+
+    subjects = layout.get_subjects()
+
+    # filter subject list
+    if isinstance(subject_list, list):
+        subjects = [s for s in subjects if s in subject_list]
+    elif isinstance(subject_list, dict):
+        subjects = [s for s in subjects if s in subject_list.keys()]
+
+    subsess = []
+    # filter session list
+    for s in subjects:
+        sessions = layout.get_sessions(subject=s)
+        if not sessions:
+            print('WARNING: No sessions found for subject {}'.format(s))
+        elif session_list:
+            # Append tuple of subject and session only if the session is in the given session_list
+            subsess += [(s, session) for session in sessions if session in session_list]
+        else:
+            subsess += list(product([s], sessions))
+
+    assert len(subsess), 'bids data not found for participants. If labels ' \
+            'were provided, check the participant labels for errors.  ' \
+            'Otherwise check that the bids folder provided is correct.'
+
+    return subsess
 
 def generate_parser(parser=None):
     """
