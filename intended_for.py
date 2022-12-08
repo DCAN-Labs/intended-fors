@@ -95,7 +95,7 @@ class FieldmapPairing(object):
         # Make map of series number to pair
         fmap_series_nums = {}
         for run in fmap_runs:
-            min_series_number = min([f.get_metadata()['SeriesNumber'] for f in fmap_runs[run]])
+            min_series_number = min([f.get_associations()[0].get_metadata()['SeriesNumber'] for f in fmap_runs[run]])
             fmap_series_nums[min_series_number] = [f.path for f in fmap_runs[run]]
 
         func_series_nums = {f.get_metadata()['SeriesNumber']:f.path for f in self.func}
@@ -217,9 +217,9 @@ def main(argv=sys.argv):
             x = FieldmapPairing(layout, subject, session, strategy)
             for fieldmap, functional_list in x.pairing.items():
                 print(fieldmap, 'IntendedFor',functional_list)
-                x.insert_edit_json(fieldmap, 'IntendedFor',functional_list)
+                #x.insert_edit_json(fieldmap, 'IntendedFor',functional_list)
         except Exception as e:
-            print("Error finding {subject}, {session}.", e)
+            print("Error finding {}, {}.".format(subject, session), e)
 
 if __name__ == "__main__":
     sys.exit(main())
