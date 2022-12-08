@@ -21,6 +21,11 @@ class FieldmapPairing(object):
         self.session = session
         self.task = task
 
+        self.func = get_func()
+        self.fmap = get_fmap()
+
+        self.pairing = {f.path:[] for f in self.fmap}
+
         if strategy == 'closest':
             self.pair_by_closest()
         elif strategy == 'eta_squared':
@@ -38,14 +43,16 @@ class FieldmapPairing(object):
             #print('Returning all functional tasks')
             return self.layout.get(subject=self.subject, session=self.session, datatype='func', suffix='bold', extension='.nii.gz')
 
-    def get_fmap_runs(self):
+    def get_fmap(self):
         if self.task:
-            fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
+            return fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
         else:
-            fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
+            return fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
+    
+    def group_fmap_by_run(self):
         # Pair all fmaps by run number
         fmap_runs = {}
-        for f in fmap:
+        for f in self.fmap:
             f_run = f.get_entities()['run']
             if f_run in fmap_runs:
                 fmap_runs[f_run].append(f)
@@ -58,17 +65,16 @@ class FieldmapPairing(object):
         return
 
     def pair_by_last(self):
-        func = self.get_func(task=self.task)
-        fmap = self.get_fmap_runs(task=self.task)
-        last_fmap_pair = fmap[sorted(fmap.keys())[-1]]
-        pairing = {}
-        func_paths = [f.path for f in func]
+        fmap_runs = self.group_fmap_by_run()
+        last_fmap_pair = fmap_runs[sorted(fmap_runs.keys())[-1]]
+        func_paths = [f.path for f in self.func]
         for f in last_fmap_pair:
-            self.insert_edit_json(f, 'IntendedFor', func_paths)
+            self.pairing[f] = func_paths
+            #self.insert_edit_json(f, 'IntendedFor', func_paths)
         return 
         
     def pair_by_closest(self):
-        fmap_runs = self.get_fmap_runs()
+        fmap_runs = self.group_fmap_by_run()
         # Return a hash map of functional run to field maps
         # Make map of series number to pair
         fmap_series_nums = {}
@@ -76,8 +82,7 @@ class FieldmapPairing(object):
             min_series_number = min([f.get_metadata()['SeriesNumber'] for f in fmap_runs[run]])
             fmap_series_nums[min_series_number] = [f.path for f in fmap_runs[run]]
 
-        func = self.get_func()
-        func_series_nums = {f.get_metadata()['SeriesNumber']:f.path for f in func}
+        func_series_nums = {f.get_metadata()['SeriesNumber']:f.path for f in self.func}
 
         fmap_keys = sorted(fmap_series_nums)
         func_keys = sorted(func_series_nums)
@@ -88,12 +93,13 @@ class FieldmapPairing(object):
         for func_iter in range(len(func_keys)):
             # If the current fmap iter is at the end then insert current fmaps or if the func series number is less than the series number of the next fieldmap
             if fmap_iter == len(fmap_keys) - 1 or func_keys[func_iter] < fmap_keys[fmap_iter + 1]:
-                pairing[func_series_nums[func_keys[func_iter]]] = fmap_series_nums[fmap_keys[fmap_iter]]
+                continue
             # Else insert the next fieldmap and increment the field map counter
             else:
                 fmap_iter += 1
-                pairing[func_series_nums[func_keys[func_iter]]] = fmap_series_nums[fmap_keys[fmap_iter]]
-        return pairing
+            for f in fmap_series_nums[fmap_keys[fmap_iter]]:
+                self.pairing[f].append(func_series_nums[func_keys[func_iter]])
+        return
 
     def insert_edit_json(self, json_path, json_field, value):
         with open(json_path, 'r') as f:
@@ -170,7 +176,7 @@ def generate_parser(parser=None):
              'does not include "sub-"'
     )
     parser.add_argument(
-        '--session-labels', dest='session_list', nargs='+'
+        '--session-labels', dest='session_list', nargs='+',
         help='Optional list of session ids to run for a given subject or all '
              'subjects if --participant-label is not specified. Default is to '
              'run on all sessions of each given subject. A session label does '
@@ -178,7 +184,7 @@ def generate_parser(parser=None):
     )
     parser.add_argument(
         '--task-labels', dest='task_list', nargs="+",
-        help='An optional list of tasks to loop through. Note: Only specify '
+        help='An optional list of tasks to loop through. NOTE: Only specify '
              'task if the fieldmaps have a corresponding "acq-" entity that '
              'contains the same task name.'
     )
@@ -202,13 +208,13 @@ def main(argv=sys.argv):
         for task in tasks:
             for subject,session in subsess:
                 try:
-                    p = FieldmapPairing(layout, subject, session, strategy)
+                    FieldmapPairing(layout, subject, session, strategy, task=task)
                 except Exception as e:
                     print(f"Error finding {subject}, {session}.", e)
     else:
         for subject,sessions in subsess:
             try:
-                    p = FieldmapPairing(layout, subject, session, strategy)
+                    FieldmapPairing(layout, subject, session, strategy)
             except Exception as e:
                 print(f"Error finding {subject}, {sessions}.", e)
 
