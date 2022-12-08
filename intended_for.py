@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import os, sys, argparse, json
 from bids import BIDSLayout
@@ -21,8 +21,8 @@ class FieldmapPairing(object):
         self.session = session
         self.task = task
 
-        self.func = get_func()
-        self.fmap = get_fmap()
+        self.func = self.get_func()
+        self.fmap = self.get_fmap()
 
         self.pairing = {f.path:[] for f in self.fmap}
 
@@ -32,8 +32,10 @@ class FieldmapPairing(object):
             self.pair_by_eta()
         elif strategy == 'last':
             self.pair_by_last()
+        elif strategy == 'task':
+            self.pair_by_task()
         else:
-            print('ERROR: Strategy not recognized')
+            print('Warning: Strategy not recognized or specified')
 
     def get_func(self):
         if self.task:
@@ -45,9 +47,9 @@ class FieldmapPairing(object):
 
     def get_fmap(self):
         if self.task:
-            return fmap = self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
+            return self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
         else:
-            return fmap = self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
+            return self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
     
     def group_fmap_by_run(self):
         # Pair all fmaps by run number
@@ -58,19 +60,33 @@ class FieldmapPairing(object):
                 fmap_runs[f_run].append(f)
             else:
                 fmap_runs[f_run] = [f]
+
+        for run_number, fieldmap_pairs in fmap_runs.items():
+            try:
+                assert(len(fieldmap_pairs) == 2)
+            except AssertionError:
+                sys.exit('Unpaired fieldmaps for {} {}'.format(self.subject, self.session))
+
         return fmap_runs
 
     def pair_by_eta_squared(self):
         # TODO
         return
 
+    def pair_by_task(self):
+        tasks = self.layout.get_tasks(subject=self.subject, session=self.session)
+        for task in tasks:
+            self.task = task
+            self.func = self.get_func()
+            self.fmap = self.get_fmap()
+            self.pair_by_last()
+
     def pair_by_last(self):
         fmap_runs = self.group_fmap_by_run()
         last_fmap_pair = fmap_runs[sorted(fmap_runs.keys())[-1]]
         func_paths = [f.path for f in self.func]
         for f in last_fmap_pair:
-            self.pairing[f] = func_paths
-            #self.insert_edit_json(f, 'IntendedFor', func_paths)
+            self.pairing[f.path] = func_paths
         return 
         
     def pair_by_closest(self):
@@ -182,13 +198,6 @@ def generate_parser(parser=None):
              'run on all sessions of each given subject. A session label does '
              'not include "ses-"'
     )
-    parser.add_argument(
-        '--task-labels', dest='task_list', nargs="+",
-        help='An optional list of tasks to loop through. NOTE: Only specify '
-             'task if the fieldmaps have a corresponding "acq-" entity that '
-             'contains the same task name.'
-    )
-
     return parser
 
 def main(argv=sys.argv):
@@ -202,21 +211,15 @@ def main(argv=sys.argv):
     subsess = read_bids_layout(layout, subject_list=args.subject_list, session_list=args.session_list)
 
     strategy = args.strategy
-    tasks = args.tasks
 
-    if tasks:
-        for task in tasks:
-            for subject,session in subsess:
-                try:
-                    FieldmapPairing(layout, subject, session, strategy, task=task)
-                except Exception as e:
-                    print(f"Error finding {subject}, {session}.", e)
-    else:
-        for subject,sessions in subsess:
-            try:
-                    FieldmapPairing(layout, subject, session, strategy)
-            except Exception as e:
-                print(f"Error finding {subject}, {sessions}.", e)
+    for subject,session in subsess:
+        try:
+            x = FieldmapPairing(layout, subject, session, strategy)
+            for fieldmap, functional_list in x.pairing.items():
+                print(fieldmap, 'IntendedFor',functional_list)
+                x.insert_edit_json(fieldmap, 'IntendedFor',functional_list)
+        except Exception as e:
+            print("Error finding {subject}, {session}.", e)
 
 if __name__ == "__main__":
     sys.exit(main())
