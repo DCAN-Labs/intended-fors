@@ -217,7 +217,7 @@ def main(argv=sys.argv):
             x = FieldmapPairing(layout, subject, session, strategy)
             for fieldmap, functional_list in x.pairing.items():
                 print(fieldmap, 'IntendedFor',functional_list)
-                #x.insert_edit_json(fieldmap, 'IntendedFor',functional_list)
+                x.insert_edit_json(fieldmap, 'IntendedFor',functional_list)
         except Exception as e:
             print("Error finding {}, {}.".format(subject, session), e)
 
