@@ -55,7 +55,11 @@ class FieldmapPairing(object):
         # Pair all fmaps by run number
         fmap_runs = {}
         for f in self.fmap:
-            f_run = f.get_entities()['run']
+            # TODO: Handle case where there is only one run
+            try:
+                f_run = f.get_entities()['run']
+            except:
+                f_run = 1
             if f_run in fmap_runs:
                 fmap_runs[f_run].append(f)
             else:
@@ -106,15 +110,12 @@ class FieldmapPairing(object):
 
         pairing = {}
         # Iterate over each functional image
-        for func_iter in range(len(func_keys)):
+        for func_key in func_keys:
             # If the current fmap iter is at the end then insert current fmaps or if the func series number is less than the series number of the next fieldmap
-            if fmap_iter == len(fmap_keys) - 1 or func_keys[func_iter] < fmap_keys[fmap_iter + 1]:
-                continue
-            # Else insert the next fieldmap and increment the field map counter
-            else:
+            while fmap_iter < len(fmap_keys) - 1 and func_key > fmap_keys[fmap_iter + 1]:
                 fmap_iter += 1
             for f in fmap_series_nums[fmap_keys[fmap_iter]]:
-                self.pairing[f].append(func_series_nums[func_keys[func_iter]])
+                self.pairing[f].append(func_series_nums[func_key])
         return
 
     def insert_edit_json(self, json_path, json_field, value):
