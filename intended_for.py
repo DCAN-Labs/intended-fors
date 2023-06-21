@@ -13,7 +13,7 @@ prog_descrip =  """%(prog)s: sefm_eval pairs each of the pos/neg sefm and return
 
 class FieldmapPairing(object):
 
-    def __init__(self, layout, subject, session, strategy, task=None):
+    def __init__(self, layout, subject, session, strategy, task=None,skip_session=False):
         # For each functional image in the layout find the fmap pair with a series number that is lower than that of the functional image
         # If the functional image was acquired before the fmap then find the fmap pair with the closest series number
         self.layout = layout
@@ -37,21 +37,36 @@ class FieldmapPairing(object):
         else:
             print('Warning: Strategy not recognized or specified')
 
-    def get_func(self):
-        if self.task:
+    def get_func(self,skip_session=False):
+        if skip_session:
+          if self.task:
+              #print('Returning functional images for task: {}'.format(task))
+              return self.layout.get(subject=self.subject, datatype='func', task=self.task, suffix='bold', extension='.nii.gz')
+          else:
+              #print('Returning all functional tasks')
+              return self.layout.get(subject=self.subject, datatype='func', suffix='bold', extension='.nii.gz')
+        else:
+          if self.task:
             #print('Returning functional images for task: {}'.format(task))
             return self.layout.get(subject=self.subject, session=self.session, datatype='func', task=self.task, suffix='bold', extension='.nii.gz')
-        else:
+          else:
             #print('Returning all functional tasks')
             return self.layout.get(subject=self.subject, session=self.session, datatype='func', suffix='bold', extension='.nii.gz')
-
-    def get_fmap(self):
-        if self.task:
-            return self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
-        else:
+        
+    def get_fmap(self,skip_session=False):
+        if skip_session:
+          if self.task:
+            return self.layout.get(subject=self.subject, acquisition=self.task, datatype='fmap', extension='.json')
+          else:
             # print(self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json'))
-            return self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json')
-    
+            return self.layout.get(subject=self.subject, datatype='fmap', acquisition='fMRI', extension='.json')        
+        else:
+          if self.task:
+              return self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
+          else:
+              # print(self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json'))
+              return self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json')
+      
     def group_fmap_by_run(self):
         # Pair all fmaps by run number
         fmap_runs = {}
@@ -78,8 +93,11 @@ class FieldmapPairing(object):
         # TODO
         return
 
-    def pair_by_task(self):
-        tasks = self.layout.get_tasks(subject=self.subject, session=self.session)
+    def pair_by_task(self,skip_session=False):
+        if skip_session:
+          tasks = self.layout.get_tasks(subject=self.subject)        
+        else:
+          tasks = self.layout.get_tasks(subject=self.subject, session=self.session)
         for task in tasks:
             self.task = task
             self.func = self.get_func()
@@ -132,7 +150,7 @@ class FieldmapPairing(object):
             json.dump(data, f, indent=4)
         return
 
-def read_bids_layout(layout, subject_list=None, session_list=None):
+def read_bids_layout(layout, subject_list=None, session_list=None,skip_session=False):
     """
     :param bids_input: path to input bids folder
     :param subject_list: a list of subject ids to filter on
@@ -147,21 +165,24 @@ def read_bids_layout(layout, subject_list=None, session_list=None):
     elif isinstance(subject_list, dict):
         subjects = [s for s in subjects if s in subject_list.keys()]
 
-    subsess = []
-    # filter session list
-    for s in subjects:
-        sessions = layout.get_sessions(subject=s)
-        if not sessions:
-            print('WARNING: No sessions found for subject {}'.format(s))
-        elif session_list:
-            # Append tuple of subject and session only if the session is in the given session_list
-            subsess += [(s, session) for session in sessions if session in session_list]
-        else:
-            subsess += list(product([s], sessions))
+    if skip_session:
+      subsess = subjects
+    else:  
+      subsess = []
+      # filter session list
+      for s in subjects:
+          sessions = layout.get_sessions(subject=s)
+          if not sessions:
+              print('WARNING: No sessions found for subject {}'.format(s))
+          elif session_list:
+              # Append tuple of subject and session only if the session is in the given session_list
+              subsess += [(s, session) for session in sessions if session in session_list]
+          else:
+              subsess += list(product([s], sessions))
 
-    assert len(subsess), 'bids data not found for participants. If labels ' \
-            'were provided, check the participant labels for errors.  ' \
-            'Otherwise check that the bids folder provided is correct.'
+      assert len(subsess), 'bids data not found for participants. If labels ' \
+              'were provided, check the participant labels for errors.  ' \
+              'Otherwise check that the bids folder provided is correct.'
 
     return subsess
 
@@ -200,6 +221,11 @@ def generate_parser(parser=None):
              'run on all sessions of each given subject. A session label does '
              'not include "ses-"'
     )
+    parser.add_argument(
+      '--no-sessions', dest='skip_session', default=False,
+      help='Optional flag to skip sessions. Default is false.'
+           'If set to true, the code will assume no sessions exist.'
+    )    
     return parser
 
 def main(argv=sys.argv):
@@ -210,11 +236,24 @@ def main(argv=sys.argv):
     layout = BIDSLayout(bids_dir)
 
     # Create a list of tuples for all subjects and sessions
-    subsess = read_bids_layout(layout, subject_list=args.subject_list, session_list=args.session_list)
+    subsess = read_bids_layout(layout, subject_list=args.subject_list, session_list=args.session_list,skip_session=args.skip_session)
 
     strategy = args.strategy
-
-    for subject,session in subsess:
+    skip_session = args.skip_session
+    if skip_session:
+      for subject in subsess:
+        session = None
+        try:
+          x = FieldmapPairing(layout, subject, session, strategy,skip_session=skip_session)
+          for fieldmap, functional_list in x.pairing.items():
+            rel_functional_list = [f.replace(layout.root + '/', '') for f in functional_list]
+            rel_functional_list_nosub = [os.path.join(*(f.split(os.path.sep)[1:])) for f in rel_functional_list]
+            print(fieldmap, 'IntendedFor',rel_functional_list_nosub)
+            x.insert_edit_json(fieldmap, 'IntendedFor',rel_functional_list_nosub)
+        except Exception as e:
+          print("Error finding {}, {}.".format(subject, session), e)    
+    else:
+      for subject,session in subsess:
         try:
             x = FieldmapPairing(layout, subject, session, strategy)
             for fieldmap, functional_list in x.pairing.items():
