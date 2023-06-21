@@ -49,7 +49,8 @@ class FieldmapPairing(object):
         if self.task:
             return self.layout.get(subject=self.subject, session=self.session, acquisition=self.task, datatype='fmap', extension='.json')
         else:
-            return self.layout.get(subject=self.subject, session=self.session, datatype='fmap', extension='.json')
+            # print(self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json'))
+            return self.layout.get(subject=self.subject, session=self.session, datatype='fmap', acquisition='fMRI', extension='.json')
     
     def group_fmap_by_run(self):
         # Pair all fmaps by run number
